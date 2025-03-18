@@ -35,7 +35,7 @@ userRouter.post("/login",async(req,res)=>{
        return res.status(400).json({status:false,message:"Password incorrect"});
     }
     
-    const token = jwt.sign({email:user.email},"jwtkey",{expiresIn:"4h"});
+    const token = jwt.sign({_id:user._id.toString(),email:user.email},"jwtkey",{expiresIn:"4h"});
     res.cookie("token",token);
     res.status(200).json({status:true,message:"loggin Sucessfull",token});
 })
@@ -86,5 +86,36 @@ userRouter.get("/logout",(req,res)=>{
     res.clearCookie("token");
     return res.json({status:true,message:"Logout Sucessfully"})
 })
+
+userRouter.get("/profile", authentication, async (req, res) => {
+    try {
+        console.log("Decoded User from Token:", req.user); // Debugging
+
+        // Ensure req.user exists and has an email
+        if (!req.user || !req.user.email) {
+            return res.status(401).json({ message: "User not authenticated" });
+        }
+
+        // Fetch user from MongoDB using email
+        const user = await UserModel.findOne({ email: req.user.email }).select("username email");
+
+        console.log("Fetched User:", user); // Debugging
+
+        // If user is not found, return error
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Return user details
+        return res.status(200).json({
+            username: user.username,
+            email: user.email
+        });
+
+    } catch (error) {
+        console.error("Error fetching profile:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+});
 
 module.exports = userRouter;
